@@ -1,72 +1,47 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import Depends, FastAPI
+from sqlalchemy.orm import Session
+from app import models, schemas
+from app.database import SessionLocal, engine
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="AI Job Search Assistant",
     description="Backend API for tracking jobs and analyzing job descriptions.",
-    version="0.1.0",
+    version="0.3.0",
 )
 
-class Job(BaseModel):
-    company: str
-    title: str
-    location: str
-    status: str = "saved"
-
-jobs ={}
-next_id = 1
-
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 @app.get("/")
+
 def root():
     return {"message": "AI Job Search Assistant API is running"}
 
 @app.get("/health")
+
 def health_check():
     return {"status": "healthy"}
 
-@app.post("/jobs")
-def create_job(job: Job):
-    global next_id
+@app.post("/jobs", response_model=schemas.JobResponse)
 
-    job_data = job.model_dump()
-    job_data["id"] = next_id
+def create_job(
+    job: schemas.JobCreate,
+    db: Session = Depends(get_db),
 
-    jobs[next_id] = job_data
-    next_id += 1
+):
 
-    return job_data
+    db_job = models.Job(**job.model_dump())
+    db.add(db_job)
+    db.commit()
+    db.refresh(db_job)
+    return db_job
 
-@app.get("/jobs")
-def get_jobs():
-    return list(jobs.values())
+@app.get("/jobs", response_model=list[schemas.JobResponse])
 
-@app.get("/jobs/{job_id}")
-def get_job(job_id: int):
-    if job_id not in jobs:
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    return jobs[job_id]
-
-@app.put("/jobs/{job_id}")
-def update_job(job_id: int, job: Job):
-    if job_id not in jobs:
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    job_data = job.model_dump()
-    job_data["id"] = job_id
-    jobs[job_id] = job_data
-
-    return job_data
-
-@app.delete("/jobs/{job_id}")
-def delete_job(job_id: int):
-    if job_id not in jobs:
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    delete_job = jobs.pop(job_id)
-
-    return {
-        "message": "Job deleted",
-        "job": delete_job
-    }
+def get_jobs(db: Session = Depends(get_db)):
+    return db.query(models.Job).all()
