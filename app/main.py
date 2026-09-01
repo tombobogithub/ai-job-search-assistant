@@ -39,7 +39,6 @@ def create_job(
     db: Session = Depends(get_db),
 ):
     db_job = models.Job(**job.model_dump())
-
     db.add(db_job)
     db.commit()
     db.refresh(db_job)
@@ -51,8 +50,11 @@ def create_job(
 def get_jobs(
     status: str | None = None,
     company: str | None = None,
+    sort: str = "newest",
+    limit: int = 10,
+    offset: int = 0,
     db: Session = Depends(get_db),
-):
+    ):
     query = db.query(models.Job)
 
     if status:
@@ -63,7 +65,12 @@ def get_jobs(
             models.Job.company.ilike(f"%{company}%")
         )
 
-    return query.all()
+    if sort == "oldest":
+        query = query.order_by(models.Job.created_at.asc())
+    else:
+        query = query.order_by(models.Job.created_at.desc())
+
+    return query.offset(offset).limit(limit).all()
 
 
 @app.get("/jobs/{job_id}", response_model=schemas.JobResponse)
