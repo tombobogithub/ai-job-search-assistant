@@ -8,12 +8,14 @@ class JobCreate(BaseModel):
     title: str = Field(min_length=1, max_length=150)
     location: str = Field(min_length=1, max_length=100)
     status: str = "saved"
+    job_url: Optional[str] = None
     
 class JobUpdate(BaseModel):
     company: Optional[str] = None
     title: Optional[str] = None
     location: Optional[str] = None
     status: Optional[str] = None
+    job_url: Optional[str] = None
 
 class JobResponse(JobCreate):
     id: int
