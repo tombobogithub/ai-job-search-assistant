@@ -1,0 +1,23 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: jobuser
+      POSTGRES_PASSWORD: jobpassword
+      POSTGRES_DB: job_search
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://jobuser:jobpassword@db:5432/job_search
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
