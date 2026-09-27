@@ -1,3 +1,4 @@
+import os
 import pytest
 
 from fastapi.testclient import TestClient
@@ -8,7 +9,10 @@ from app import models
 from app.database import Base
 from app.main import app, get_db
 
-TEST_DATABASE_URL = "postgresql+psycopg://localhost/job_search_test"
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql+psycopg://localhost/job_search_test",
+)
 
 test_engine = create_engine(TEST_DATABASE_URL)
 
