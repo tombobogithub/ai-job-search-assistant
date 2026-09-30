@@ -6,7 +6,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app import models
-from app.database import Base
 from app.main import app, get_db
 
 TEST_DATABASE_URL = os.getenv(
@@ -31,8 +30,6 @@ def override_get_db():
         db.close()
 
 app.dependency_overrides[get_db] = override_get_db
-
-Base.metadata.create_all(bind=test_engine)
 
 client = TestClient(app)
 
