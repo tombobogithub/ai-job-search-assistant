@@ -2,11 +2,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 
 from app import models, schemas
-from app.database import SessionLocal, engine
-
-
-models.Base.metadata.create_all(bind=engine)
-
+from app.database import SessionLocal
 
 app = FastAPI(
     title="AI Job Search Assistant",
