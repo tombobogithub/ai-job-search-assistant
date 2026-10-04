@@ -44,7 +44,7 @@ def create_job(
 
 @app.get("/jobs", response_model=list[schemas.JobResponse])
 def get_jobs(
-    status: str | None = None,
+    status: schemas.JobStatus | None = None,
     company: str | None = None,
     sort: str = "newest",
     limit: int = 10,

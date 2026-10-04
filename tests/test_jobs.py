@@ -104,7 +104,7 @@ def test_patch_job():
             "company": "Microsoft",
             "title": "Software Engineer",
             "location": "Redmond, WA",
-            "status": "saved,"
+            "status": "saved",
         },
     )
 
@@ -155,3 +155,79 @@ def test_job_not_found():
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Job not found"}
+
+
+def test_create_job_invalid_status():
+    response = client.post(
+        "/jobs",
+        json={
+            "company": "Google",
+            "title": "Software Engineer",
+            "location": "Mountain View, CA",
+            "status": "banana",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_patch_job_invalid_status():
+    create_response = client.post(
+        "/jobs",
+        json={
+            "company": "Microsoft",
+            "title": "Software Engineer",
+            "location": "Redmond, WA",
+            "status": "saved",
+        },
+    )
+
+    job_id = create_response.json()["id"]
+
+    patch_response = client.patch(
+        f"/jobs/{job_id}",
+        json={
+            "status": "banana",
+        },
+    )
+
+    assert patch_response.status_code == 422
+
+
+def test_patch_job_preserves_unset_fields():
+    create_response = client.post(
+        "/jobs",
+        json={
+            "company": "Google",
+            "title": "Backend Engineer",
+            "location": "Mountain View, CA",
+            "status": "saved",
+        },
+    )
+
+    job_id = create_response.json()["id"]
+
+    patch_response = client.patch(
+        f"/jobs/{job_id}",
+        json={
+            "status": "interview",
+        },
+    )
+
+    assert patch_response.status_code == 200
+
+    updated_job = patch_response.json()
+
+    assert updated_job["status"] == "interview"
+    assert updated_job["company"] == "Google"
+    assert updated_job["title"] == "Backend Engineer"
+    assert updated_job["location"] == "Mountain View, CA"
+
+
+def test_filter_jobs_invalid_status():
+    response = client.get(
+        "/jobs",
+        params={"status": "banana"},
+    )
+
+    assert response.status_code == 422
