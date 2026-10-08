@@ -36,6 +36,18 @@ def create_job(
 ):
     db_job = models.Job(**job.model_dump())
     db.add(db_job)
+
+    # Generate the new Job ID before committing
+    db.flush()
+
+    # Record the initial job status
+    history = models.JobStatiusHistory(
+        job_id=db_job.id,
+        status=db_job.status,
+    )
+
+    db.add(history)
+
     db.commit()
     db.refresh(db_job)
 
@@ -94,7 +106,7 @@ def patch_job(
     job_id: int,
     job: schemas.JobUpdate,
     db: Session = Depends(get_db),
-):
+    ):
     db_job = (
         db.query(models.Job)
         .filter(models.Job.id == job_id)
@@ -109,8 +121,20 @@ def patch_job(
 
     update_data = job.model_dump(exclude_unset=True)
 
+    status_changed = (
+        "status" in update_data
+        and update_data["status"].value != db_job.status
+    )
+
     for field, value in update_data.items():
         setattr(db_job, field, value)
+
+    if status_changed:
+        history = models.JobStatiusHistory(
+            job_id=db_job.id,
+            status=update_data["status"].value,
+        )
+        db.add(history)
 
     db.commit()
     db.refresh(db_job)
@@ -164,7 +188,46 @@ def delete_job(
             detail="Job not found",
         )
 
+    # Delete related status history first
+    db.query(models.JobStatiusHistory).filter(
+        models.JobStatiusHistory.job_id == job_id
+    ).delete()
+    
     db.delete(db_job)
     db.commit()
 
     return {"message": "Job deleted"}
+
+
+@app.get(
+    "/jobs/{job_id}/history",
+    response_model=list[schemas.JobStatusHistoryResponse],
+)
+def get_job_history(
+    job_id: int,
+    db: Session = Depends(get_db)
+):
+    db_job = (
+        db.query(models.Job)
+        .filter(models.Job.id == job_id)
+        .first()
+    )
+
+    if db_job is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found",
+        )
+
+    # Retrieve status history
+    history = (
+        db.query(models.JobStatiusHistory)
+        .filter(models.JobStatiusHistory.job_id == job_id)
+        .order_by(
+            models.JobStatiusHistory.changed_at,
+            models.JobStatiusHistory.id,
+        )
+        .all()
+    )
+
+    return history
