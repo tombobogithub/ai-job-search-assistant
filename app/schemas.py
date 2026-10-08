@@ -13,12 +13,14 @@ class JobStatus(str, Enum):
     rejected = "rejected"
     withdrawn = "withdrawn"
 
+
 class JobCreate(BaseModel):
     company: str = Field(min_length=1, max_length=100)
     title: str = Field(min_length=1, max_length=150)
     location: str = Field(min_length=1, max_length=100)
     status: JobStatus = JobStatus.saved
     job_url: Optional[str] = None
+
     
 class JobUpdate(BaseModel):
     company: Optional[str] = None
@@ -27,8 +29,19 @@ class JobUpdate(BaseModel):
     status: Optional[JobStatus] = None
     job_url: Optional[str] = None
 
+
 class JobResponse(JobCreate):
     id: int
     created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class JobStatusHistoryResponse(BaseModel):
+    id: int
+    job_id: int
+    status: JobStatus
+    changed_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
